@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>👵 嫲嫲覆診助手</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 18px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f5f0eb;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding-bottom: 90px;
+  }
+
+  /* ===== HEADER ===== */
+  .app-header {
+    background: linear-gradient(135deg, #2d5a3d, #4a8c6f);
+    color: #fff;
+    padding: 20px 16px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,.15);
+  }
+  .app-header h1 { font-size: 1.6rem; font-weight: 700; }
+  .app-header .subtitle { font-size: 0.85rem; opacity: .8; margin-top: 2px; }
+  .header-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .header-actions .btn {
+    background: rgba(255,255,255,.2);
+    border: 1px solid rgba(255,255,255,.3);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .header-actions .btn:hover { background: rgba(255,255,255,.3); }
+  .header-actions .btn.active { background: #fff; color: #2d5a3d; border-color: #fff; font-weight: 600; }
+
+  /* ===== TABS ===== */
+  .tab-bar {
+    display: flex;
+    background: #fff;
+    border-bottom: 2px solid #e0d8d0;
+    position: sticky;
+    top: 100px;
+    z-index: 99;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 14px 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #888;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .tab-btn.active { color: #2d5a3d; border-bottom-color: #2d5a3d; }
+
+  /* ===== CONTENT ===== */
+  .tab-content { display: none; padding: 16px; max-width: 600px; margin: 0 auto; }
+  .tab-content.active { display: block; }
+
+  /* ===== CARDS ===== */
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    border-left: 4px solid #4a8c6f;
+    position: relative;
+  }
+  .card-title { font-size: 1.2rem; font-weight: 700; color: #2d5a3d; margin-bottom: 6px; }
+  .card-meta { font-size: 0.9rem; color: #666; line-height: 1.6; }
+  .card-meta strong { color: #333; }
+  .card-actions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: none;
+    gap: 6px;
+  }
+  .card-actions.show { display: flex; }
+  .card-actions .btn-sm {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    cursor: pointer;
+    background: #fff;
+  }
+  .card-actions .btn-sm.edit { color: #2d5a3d; border-color: #4a8c6f; }
+  .card-actions .btn-sm.delete { color: #c0392b; border-color: #c0392b; }
+  .empty-state {
+    text-align: center;
+    color: #999;
+    padding: 40px 20px;
+    font-size: 1.1rem;
+  }
+  .empty-state .icon { font-size: 3rem; display: block; margin-bottom: 12px; }
+
+  /* ===== FORM MODAL ===== */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-sheet {
+    background: #fff;
+    width: 100%;
+    max-width: 500px;
+    max-height: 85vh;
+    overflow-y: auto;
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px 30px;
+    animation: slideUp .3s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-sheet h2 { font-size: 1.3rem; color: #2d5a3d; margin-bottom: 16px; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #555; margin-bottom: 4px; }
+  .form-group input, .form-group textarea, .form-group select {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 1.1rem;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    background: #fafafa;
+    transition: border-color .2s;
+  }
+  .form-group input:focus, .form-group textarea:focus {
+    border-color: #4a8c6f;
+    outline: none;
+    background: #fff;
+  }
+  .form-group textarea { resize: vertical; min-height: 60px; }
+  .form-row { display: flex; gap: 10px; }
+  .form-row .form-group { flex: 1; }
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: #2d5a3d;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .btn-primary:hover { background: #1e3f2a; }
+  .btn-secondary {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    background: #eee;
+    color: #555;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  /* ===== ADMIN PANEL ===== */
+  .admin-panel {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    padding: 12px 16px;
+    box-shadow: 0 -2px 12px rgba(0,0,0,.1);
+    z-index: 150;
+    border-top: 2px solid #2d5a3d;
+  }
+  .admin-panel.show { display: flex; gap: 10px; }
+  .admin-panel .btn-add {
+    flex: 1;
+    padding: 14px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: #2d5a3d;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .admin-panel .btn-logout {
+    padding: 14px 20px;
+    font-size: 0.9rem;
+    background: #eee;
+    color: #666;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+
+  /* ===== LOGIN OVERLAY ===== */
+  .login-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #f5f0eb;
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .login-overlay.show { display: flex; }
+  .login-box {
+    background: #fff;
+    border-radius: 20px;
+    padding: 32px 24px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,.1);
+  }
+  .login-box h2 { font-size: 1.5rem; color: #2d5a3d; margin-bottom: 8px; }
+  .login-box p { font-size: 0.9rem; color: #888; margin-bottom: 20px; }
+  .login-box input {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.1rem;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .login-box .btn-login {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: #2d5a3d;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+
+  /* ===== STATUS BAR ===== */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,.7);
+    margin-top: 6px;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .status-dot.online { background: #4caf50; }
+  .status-dot.offline { background: #f44336; }
+  .status-dot.loading { background: #ff9800; animation: pulse .8s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+  /* ===== LAST UPDATED ===== */
+  .last-updated {
+    text-align: center;
+    font-size: 0.75rem;
+    color: #aaa;
+    padding: 20px 16px 10px;
+  }
+
+  /* ===== FILTER BAR ===== */
+  .filter-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 6px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    background: #fff;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all .2s;
+    text-align: center;
+  }
+  .filter-btn.active {
+    border-color: #2d5a3d;
+    background: #2d5a3d;
+    color: #fff;
+    font-weight: 700;
+  }
+  .filter-btn:hover { background: #f0f0f0; }
+  .filter-btn.active:hover { background: #1e3f2a; }
+
+  /* ===== DAY POPUP ===== */
+  .popup-backdrop {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,.4);
+    z-index: 200;
+  }
+  .popup-backdrop.show { display: block; }
+  .day-popup {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 10px;
+    right: 10px;
+    background: #fff;
+    border-radius: 20px 20px 0 0;
+    padding: 22px 20px 24px;
+    z-index: 201;
+    box-shadow: 0 -4px 20px rgba(0,0,0,.15);
+    max-height: 55vh;
+    overflow-y: auto;
+    animation: slideUp .3s ease;
+  }
+  .day-popup.show { display: block; }
+
+  /* ===== CALENDAR VIEW ===== */
+  .view-toggle-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .view-toggle-bar button {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    background: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .view-toggle-bar button.active {
+    border-color: #2d5a3d;
+    background: #e8f0ec;
+    color: #2d5a3d;
+    font-weight: 700;
+  }
+  .calendar-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+  .calendar-nav .month-label {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #2d5a3d;
+  }
+  .calendar-nav button {
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    background: #eee;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .calendar-day-header {
+    background: #f5f5f5;
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #888;
+    padding: 6px 0;
+  }
+  .calendar-day {
+    background: #fff;
+    min-height: 62px;
+    padding: 3px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+    transition: all .2s;
+  }
+  .calendar-day.has-appt {
+    font-weight: 700;
+  }
+  .calendar-day .day-num {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #555;
+    z-index: 1;
+    position: relative;
+    text-shadow: 0 0 3px #fff;
+  }
+  .calendar-day.other-month .day-num { color: #ddd; }
+  .calendar-day.today .day-num { color: #2d5a3d; font-weight: 700; }
+  .calendar-day.multi-appt { border: 2px dashed #555; }
+  .calendar-dots { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; margin-top: 2px; }
+  .calendar-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .calendar-view { display: none; }
+  .calendar-view.show { display: block; }
+  .list-view { display: none; }
+  .list-view.show { display: block; }
+
+  /* ===== COLOR CODING ===== */
+  .card.color-pwh { border-left-color: #e74c3c; }
+  .card.color-central { border-left-color: #3498db; }
+  .card.color-ngau { border-left-color: #e67e22; }
+  .card.color-tsim { border-left-color: #2ecc71; }
+  .card.color-tai-po { border-left-color: #9b59b6; }
+  .card.color-sha-tin { border-left-color: #1abc9c; }
+  .card.color-other { border-left-color: #95a5a6; }
+
+  /* ===== LEGEND ===== */
+  .calendar-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 0;
+    font-size: 0.75rem;
+  }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (min-width: 600px) {
+    .modal-overlay { align-items: center; }
+    .modal-sheet { border-radius: 20px; max-height: 80vh; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="app-header">
+  <h1>👵 嫲嫲覆診助手</h1>
+  <div class="subtitle">屋企人隨時睇到最新覆診資料</div>
+  <div class="header-actions">
+    <button class="btn" id="viewModeBtn" onclick="toggleViewMode()">👁 睇模式</button>
+    <button class="btn" id="adminModeBtn" onclick="showAdminLogin()">🔑 管理</button>
+    <button class="btn" id="exitCalBtn" onclick="exitApp()" style="background:#e74c3c;color:#fff;border-color:#e74c3c;">✕ 退出</button>
+  </div>
+  <div class="status-bar">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">連線中...</span>
+    <span style="margin-left:auto" id="lastUpdateTime"></span>
+  </div>
+</header>
+
+<!-- ===== TABS ===== -->
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('appointments')">📅 覆診</button>
+  <button class="tab-btn" onclick="switchTab('doctors')">👨‍⚕️ 醫生</button>
+  <button class="tab-btn" onclick="switchTab('medications')">💊 藥物</button>
+</nav>
+
+<!-- ===== TAB: 覆診 ===== -->
+<div class="tab-content active" id="tab-appointments">
+  <!-- View toggle: 列表 / 月曆 -->
+  <div class="view-toggle-bar">
+    <button class="active" id="listViewBtn" onclick="setApptView('list')">📋 列表</button>
+    <button id="calViewBtn" onclick="setApptView('calendar')">📅 月曆</button>
+  </div>
+  <!-- Color Legend -->
+  <div class="calendar-legend" id="apptLegend">
+    <span class="legend-item"><span class="legend-dot" style="background:#e74c3c"></span>威爾斯</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#3498db"></span>中環</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#e67e22"></span>牛頭角</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#2ecc71"></span>尖沙咀</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#9b59b6"></span>大埔</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#1abc9c"></span>沙田</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#95a5a6"></span>其他</span>
+  </div>
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">📋 全部</button>
+    <button class="filter-btn" data-filter="6m" onclick="setFilter('6m')">📅 過去 6 個月</button>
+    <button class="filter-btn" data-filter="3m" onclick="setFilter('3m')">📅 過去 3 個月</button>
+  </div>
+  <!-- List view -->
+  <div class="list-view show" id="appointmentsListView">
+    <div id="appointmentsList"></div>
+  </div>
+  <!-- Calendar view -->
+  <div class="calendar-view" id="appointmentsCalView">
+    <div class="calendar-nav">
+      <button onclick="calPrevMonth()">◀</button>
+      <span class="month-label" id="calMonthLabel"></span>
+      <div>
+        <button onclick="calNextMonth()">▶</button>
+        <button onclick="setApptView('list')" style="margin-left:6px;background:#e74c3c;color:#fff;border:none;padding:4px 10px;border-radius:8px;font-size:0.85rem;">退出</button>
+      </div>
+    </div>
+    <div id="calendarGrid"></div>
+  </div>
+</div>
+
+<!-- ===== TAB: 醫生 ===== -->
+<div class="tab-content" id="tab-doctors">
+  <div id="doctorsList"></div>
+</div>
+
+<!-- ===== TAB: 藥物 ===== -->
+<div class="tab-content" id="tab-medications">
+  <div id="medicationsList"></div>
+</div>
+
+<!-- ===== ADMIN PANEL (底部) ===== -->
+<div class="admin-panel" id="adminPanel">
+  <button class="btn-add" id="addBtn" onclick="openAddForm()">➕ 新增</button>
+  <button class="btn-logout" onclick="logoutAdmin()">🔒 離開管理</button>
+</div>
+
+<!-- ===== ADD/EDIT FORM MODAL ===== -->
+<div class="modal-overlay" id="formModal">
+  <div class="modal-sheet">
+    <h2 id="formTitle">新增</h2>
+    <div id="formBody"></div>
+    <button class="btn-secondary" onclick="closeForm()">取消</button>
+  </div>
+</div>
+
+<!-- ===== ADMIN LOGIN ===== -->
+<div class="login-overlay" id="loginOverlay" onclick="if(event.target===this)closeLogin()">
+  <div class="login-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <h2 style="margin:0;">🔑 管理員登入</h2>
+      <button onclick="closeLogin()" style="background:none;border:none;font-size:1.6rem;cursor:pointer;color:#999;">✕</button>
+    </div>
+    <p>輸入管理密碼進行資料管理</p>
+    <input type="password" id="adminPassword" placeholder="請輸入管理密碼" onkeydown="if(event.key==='Enter')adminLogin()">
+    <button class="btn-login" onclick="adminLogin()">登入</button>
+    <button onclick="closeLogin()" style="width:100%;padding:12px;margin-top:8px;background:#eee;color:#666;border:none;border-radius:12px;font-size:1rem;cursor:pointer;">取消</button>
+  </div>
+</div>
+
+<!-- ===== DAY POPUP (大字体) ===== -->
+<div class="popup-backdrop" id="popupBackdrop" onclick="closeDayPopup()"></div>
+<div class="day-popup" id="dayPopup">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <span style="font-size:1.4rem;font-weight:700;color:#2d5a3d;" id="popupTitle">📅 覆診</span>
+    <button onclick="closeDayPopup()" style="background:none;border:none;font-size:1.8rem;cursor:pointer;color:#999;">✕</button>
+  </div>
+  <div id="popupContent" style="font-size:1.2rem;"></div>
+  <button onclick="closeDayPopup()" style="width:100%;padding:14px;margin-top:16px;background:#2d5a3d;color:#fff;border:none;border-radius:12px;font-size:1.2rem;font-weight:700;cursor:pointer;">OK</button>
+</div>
+
+<script>
+// ===== CONFIG =====
+// 你嘅 API 後端地址 — 用相對路徑（同源，唔洗 CORS）
+const API_BASE = '/api';
+const ADMIN_PASSWORD='gma2026';  // 管理密碼
+let isAdmin = false;
+let currentTab = 'appointments';
+let editingId = null;
+let dateFilter = 'all';  // 'all', '6m', '3m'
+
+// ===== DATE FILTER =====
+function setFilter(mode) {
+  dateFilter = mode;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.filter-btn[data-filter="${mode}"]`).classList.add('active');
+  renderCurrentTab();
+  if (apptView === 'calendar') renderCalendar();
+}
+
+function getFilteredAppointments() {
+  const apps = dataCache.appointments || [];
+  if (dateFilter === 'all') return apps;
+  
+  const cutoff = new Date();
+  if (dateFilter === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
+  if (dateFilter === '3m') cutoff.setMonth(cutoff.getMonth() - 3);
+  
+  return apps.filter(a => {
+    if (!a.date) return true;
+    const d = new Date(a.date);
+    return d >= cutoff;
+  });
+}
+
+// ===== DATA CACHE =====
+let dataCache = { appointments: [], doctors: [], medications: [] };
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadAllData();
+  // 自動 refresh 每 60 秒
+  setInterval(loadAllData, 60000);
+});
+
+// ===== API CALLS =====
+async function apiCall(endpoint, method = 'GET', body = null) {
+  setStatus('loading', '載入中...');
+  try {
+    const opts = {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(`${API_BASE}${endpoint}`, opts);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    setStatus('online', '已連線');
+    return data;
+  } catch (e) {
+    setStatus('offline', '未能連線');
+    console.error('API error:', e);
+    return null;
+  }
+}
+
+async function loadAllData() {
+  const [apps, docs, meds] = await Promise.all([
+    apiCall('/appointments'),
+    apiCall('/doctors'),
+    apiCall('/medications'),
+  ]);
+  if (apps) dataCache.appointments = apps;
+  if (docs) dataCache.doctors = docs;
+  if (meds) dataCache.medications = meds;
+  renderCurrentTab();
+  document.getElementById('lastUpdateTime').textContent = new Date().toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ===== RENDER =====
+function renderCurrentTab() {
+  const list = document.getElementById(`${currentTab}List`);
+  if (!list) return;
+  
+  // Use filtered data for appointments, full data for others
+  let items;
+  if (currentTab === 'appointments') {
+    items = getFilteredAppointments();
+  } else {
+    items = dataCache[currentTab] || [];
+  }
+
+  if (items.length === 0) {
+    let msg = '<div class="empty-state"><span class="icon">📭</span>未有紀錄';
+    if (currentTab === 'appointments' && dateFilter !== 'all') {
+      msg += '<br><span style="font-size:0.85rem;color:#bbb">所選時間範圍內沒有覆診<br>試「全部」睇晒所有記錄</span>';
+    } else {
+      msg += '<br><span style="font-size:0.85rem;color:#bbb">管理員登入後可新增資料</span>';
+    }
+    msg += '</div>';
+    list.innerHTML = msg;
+    return;
+  }
+
+  list.innerHTML = items.map(item => {
+    const id = item.id || item._id || '';
+    let body = '';
+    if (currentTab === 'appointments') {
+      body = `
+        <div class="card-meta">
+          <strong>📅 日期：</strong>${item.date || '-'}<br>
+          <strong>⏰ 時間：</strong>${item.time || '-'}<br>
+          <strong>🏥 地點：</strong>${item.location || '-'}<br>
+          <strong>👨‍⚕️ 醫生：</strong>${item.doctor_name || '-'}<br>
+          <strong>📝 備註：</strong>${item.notes || '-'}
+        </div>`;
+    } else if (currentTab === 'doctors') {
+      body = `
+        <div class="card-meta">
+          <strong>👨‍⚕️ 姓名：</strong>${item.name || '-'}<br>
+          <strong>🔬 專科：</strong>${item.specialty || '-'}<br>
+          <strong>🏥 醫院/診所：</strong>${item.hospital || '-'}<br>
+          <strong>📍 地址：</strong>${item.address || '-'}<br>
+          <strong>📞 電話：</strong>${item.phone || '-'}
+        </div>`;
+    } else if (currentTab === 'medications') {
+      body = `
+        <div class="card-meta">
+          <strong>💊 藥名：</strong>${item.name || '-'}<br>
+          <strong>⚖️ 劑量：</strong>${item.dosage || '-'}<br>
+          <strong>🔄 用法：</strong>${item.frequency || '-'}<br>
+          <strong>📦 數量：</strong>${item.quantity || '-'}<br>
+          <strong>📝 備註：</strong>${item.notes || '-'}
+        </div>`;
+    }
+
+    const actions = isAdmin
+      ? `<div class="card-actions show">
+          <button class="btn-sm edit" onclick="openEditForm('${id}')">✏️ 改</button>
+          <button class="btn-sm delete" onclick="deleteItem('${id}')">🗑️ 刪</button>
+        </div>`
+      : '';
+
+    return `<div class="card ${getLocationColorClass(item.location)}"><div class="card-title">${item.title || item.name || '(未命名)'}</div>${body}${actions}</div>`;
+  }).join('');
+}
+
+// ===== TABS =====
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.tab-btn[onclick*="'${tab}'"]`).classList.add('active');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  renderCurrentTab();
+}
+
+// ===== ADMIN =====
+function closeLogin() {
+  document.getElementById('loginOverlay').classList.remove('show');
+}
+function showAdminLogin() {
+  document.getElementById('loginOverlay').classList.add('show');
+  document.getElementById('adminPassword').value = '';
+  document.getElementById('adminPassword').focus();
+}
+
+function adminLogin() {
+  const pw = document.getElementById('adminPassword').value;
+  if (pw === ADMIN_PASSWORD) {
+    isAdmin = true;
+    document.getElementById('loginOverlay').classList.remove('show');
+    document.getElementById('adminPanel').classList.add('show');
+    document.getElementById('viewModeBtn').textContent = '🔓 管理模式';
+    document.getElementById('adminModeBtn').textContent = '✅ 已登入';
+    document.getElementById('adminModeBtn').style.background = '#4caf50';
+    document.getElementById('adminModeBtn').style.color = '#fff';
+    document.getElementById('adminModeBtn').style.borderColor = '#4caf50';
+    renderCurrentTab();
+  } else {
+    alert('❌ 密碼錯誤');
+  }
+}
+
+function logoutAdmin() {
+  isAdmin = false;
+  document.getElementById('adminPanel').classList.remove('show');
+  document.getElementById('viewModeBtn').textContent = '👁 睇模式';
+  document.getElementById('adminModeBtn').textContent = '🔑 管理';
+  document.getElementById('adminModeBtn').style.background = '';
+  document.getElementById('adminModeBtn').style.color = '';
+  document.getElementById('adminModeBtn').style.borderColor = '';
+  editingId = null;
+  renderCurrentTab();
+}
+
+// ===== EXIT APP =====
+function exitApp() {
+  // Show a quick message before closing
+  document.body.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f5f0eb;flex-direction:column;gap:16px;padding:20px;">
+      <div style="font-size:4rem;">👋</div>
+      <div style="font-size:1.5rem;color:#2d5a3d;font-weight:700;">已結束</div>
+      <div style="font-size:0.9rem;color:#888;">可以關閉此頁面</div>
+    </div>
+  `;
+  // Give browser a moment to render, then try to close
+  setTimeout(() => {
+    window.close();
+  }, 300);
+}
+
+// ===== VIEW MODE =====
+let apptView = 'list';  // 'list' or 'calendar'
+
+function setApptView(mode) {
+  apptView = mode;
+  document.getElementById('listViewBtn').className = mode === 'list' ? 'active' : '';
+  document.getElementById('calViewBtn').className = mode === 'calendar' ? 'active' : '';
+  document.getElementById('appointmentsListView').className = `list-view ${mode === 'list' ? 'show' : ''}`;
+  document.getElementById('appointmentsCalView').className = `calendar-view ${mode === 'calendar' ? 'show' : ''}`;
+  if (mode === 'calendar') renderCalendar();
+}
+
+function toggleViewMode() {
+  if (isAdmin) {
+    logoutAdmin();
+  }
+  // Switch to list and scroll to top
+  setApptView('list');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ===== COLOR CODING =====
+function getLocationColor(location) {
+  if (!location) return '#95a5a6';
+  if (location.includes('威爾斯') || location.includes('威記')) return '#e74c3c';
+  if (location.includes('中環')) return '#3498db';
+  if (location.includes('牛頭角')) return '#e67e22';
+  if (location.includes('尖沙咀') || location.includes('永安')) return '#2ecc71';
+  if (location.includes('大埔')) return '#9b59b6';
+  if (location.includes('沙田') || location.includes('大圍') || location.includes('石門')) return '#1abc9c';
+  return '#95a5a6';
+}
+
+function getLocationColorClass(location) {
+  if (!location) return 'color-other';
+  if (location.includes('威爾斯') || location.includes('威記')) return 'color-pwh';
+  if (location.includes('中環')) return 'color-central';
+  if (location.includes('牛頭角')) return 'color-ngau';
+  if (location.includes('尖沙咀') || location.includes('永安')) return 'color-tsim';
+  if (location.includes('大埔')) return 'color-tai-po';
+  if (location.includes('沙田') || location.includes('大圍') || location.includes('石門')) return 'color-sha-tin';
+  return 'color-other';
+}
+
+// ===== CALENDAR =====
+let calDate = new Date();
+
+function renderCalendar() {
+  const year = calDate.getFullYear();
+  const month = calDate.getMonth();
+  
+  document.getElementById('calMonthLabel').textContent = 
+    `${year}年${month + 1}月`;
+
+  // Build calendar grid
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrev = new Date(year, month, 0).getDate();
+  const today = new Date();
+  
+  // Get appointments for this month (respecting filter)
+  const appts = getFilteredAppointments().filter(a => {
+    if (!a.date) return false;
+    const d = new Date(a.date);
+    return d.getFullYear() === year && d.getMonth() === month;
+  });
+  
+  // Build day-to-appointments map
+  const dayMap = {};
+  appts.forEach(a => {
+    if (!a.date) return;
+    const day = new Date(a.date).getDate();
+    if (!dayMap[day]) dayMap[day] = [];
+    dayMap[day].push(a);
+  });
+
+  let html = '<div class="calendar-grid">';
+  // Day headers
+  ['日', '一', '二', '三', '四', '五', '六'].forEach(d => {
+    html += `<div class="calendar-day-header">${d}</div>`;
+  });
+  
+  // Previous month days
+  for (let i = firstDay - 1; i >= 0; i--) {
+    html += `<div class="calendar-day other-month"><span class="day-num">${daysInPrev - i}</span></div>`;
+  }
+  
+  // Current month days
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+    const apptsToday = dayMap[d] || [];
+    const bgColors = [...new Set(apptsToday.map(a => getLocationColor(a.location)))];
+    const hasAppt = apptsToday.length > 0;
+    const isMulti = apptsToday.length > 1;
+    
+    let style = '';
+    if (hasAppt) {
+      if (apptsToday.length === 1) {
+        style = `background:${bgColors[0]}; border-radius:6px;`;
+      } else {
+        // Multiple appointments - use gradient
+        if (bgColors.length === 1) {
+          style = `background:${bgColors[0]}; border-radius:6px; opacity:0.85;`;
+        } else {
+          style = `background:${bgColors[0]}; border-radius:6px; opacity:0.8; border:2px solid ${bgColors[1] || bgColors[0]};`;
+        }
+      }
+    }
+    if (isToday && !hasAppt) style = 'background:#e8f0ec; border-radius:6px;';
+    
+    html += `<div class="calendar-day ${isToday ? 'today' : ''} ${hasAppt ? 'has-appt' : ''}" 
+      style="${style}" onclick="showDayAppts(${d})">
+      <span class="day-num" style="color:${hasAppt ? '#fff' : (isToday ? '#2d5a3d' : '#555')}; text-shadow:none;">${d}</span>
+    </div>`;
+  }
+  
+  // Next month days
+  const remaining = 42 - (firstDay + daysInMonth);
+  for (let d = 1; d <= remaining; d++) {
+    html += `<div class="calendar-day other-month"><span class="day-num">${d}</span></div>`;
+  }
+  
+  html += '</div>';
+  document.getElementById('calendarGrid').innerHTML = html;
+}
+
+function calPrevMonth() {
+  calDate.setMonth(calDate.getMonth() - 1);
+  renderCalendar();
+}
+
+function calNextMonth() {
+  calDate.setMonth(calDate.getMonth() + 1);
+  renderCalendar();
+}
+
+function showDayAppts(day) {
+  const year = calDate.getFullYear();
+  const month = calDate.getMonth();
+  const appts = getFilteredAppointments().filter(a => {
+    if (!a.date) return false;
+    const d = new Date(a.date);
+    return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
+  });
+  
+  if (appts.length === 0) return;
+  
+  // Build popup HTML
+  let items = appts.map(a => {
+    const color = getLocationColor(a.location);
+    const title = a.title || '覆診';
+    const time = a.time ? ` ${a.time}` : '';
+    const loc = a.location ? ` @ ${a.location}` : '';
+    const doc = a.doctor_name ? ` (${a.doctor_name})` : '';
+    return `<div style="padding:14px 0;border-bottom:1px solid #eee;display:flex;align-items:center;gap:12px;font-size:1.2rem;line-height:1.5;">
+      <span style="width:14px;height:14px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+      <span>${title}${time}${loc}${doc}</span>
+    </div>`;
+  }).join('');
+  
+  document.getElementById('popupContent').innerHTML = items;
+  document.getElementById('dayPopup').classList.add('show');
+  document.getElementById('popupBackdrop').classList.add('show');
+}
+
+function closeDayPopup() {
+  document.getElementById('dayPopup').classList.remove('show');
+  document.getElementById('popupBackdrop').classList.remove('show');
+}
+
+function toggleViewMode() {
+  if (isAdmin) {
+    logoutAdmin();
+  }
+  // Switch to list view, scroll up
+  setApptView('list');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ===== CRUD FORMS =====
+function openAddForm() {
+  editingId = null;
+  document.getElementById('formTitle').textContent = `➕ 新增${getTabLabel()}`;
+  document.getElementById('formBody').innerHTML = getFormHTML();
+  document.getElementById('formModal').classList.add('show');
+}
+
+function openEditForm(id) {
+  editingId = id;
+  document.getElementById('formTitle').textContent = `✏️ 修改${getTabLabel()}`;
+  const items = dataCache[currentTab] || [];
+  const item = items.find(i => (i.id || i._id) === id);
+  if (!item) { alert('搵唔到資料'); return; }
+  document.getElementById('formBody').innerHTML = getFormHTML(item);
+  document.getElementById('formModal').classList.add('show');
+}
+
+function closeForm() {
+  document.getElementById('formModal').classList.remove('show');
+  editingId = null;
+}
+
+function getTabLabel() {
+  const labels = { appointments: '覆診', doctors: '醫生', medications: '藥物' };
+  return labels[currentTab] || '資料';
+}
+
+function getFormHTML(item = null) {
+  const v = (key, def = '') => item ? (item[key] || def) : def;
+  if (currentTab === 'appointments') {
+    return `
+      <div class="form-group"><label>📋 標題</label><input id="f_title" value="${v('title')}" placeholder="例如：陳醫生覆診"></div>
+      <div class="form-row">
+        <div class="form-group"><label>📅 日期</label><input id="f_date" type="date" value="${v('date')}"></div>
+        <div class="form-group"><label>⏰ 時間</label><input id="f_time" type="time" value="${v('time')}"></div>
+      </div>
+      <div class="form-group"><label>🏥 地點</label><input id="f_location" value="${v('location')}" placeholder="醫院/診所名稱"></div>
+      <div class="form-group"><label>👨‍⚕️ 醫生</label><input id="f_doctor_name" value="${v('doctor_name')}" placeholder="醫生姓名"></div>
+      <div class="form-group"><label>📝 備註</label><textarea id="f_notes" placeholder="特別事項...">${v('notes')}</textarea></div>
+      <button class="btn-primary" onclick="saveItem()">💾 儲存</button>`;
+  } else if (currentTab === 'doctors') {
+    return `
+      <div class="form-group"><label>👨‍⚕️ 醫生姓名</label><input id="f_name" value="${v('name')}" placeholder="全名"></div>
+      <div class="form-group"><label>🔬 專科</label><input id="f_specialty" value="${v('specialty')}" placeholder="例如：心臟科"></div>
+      <div class="form-group"><label>🏥 醫院/診所</label><input id="f_hospital" value="${v('hospital')}"></div>
+      <div class="form-group"><label>📍 地址</label><input id="f_address" value="${v('address')}"></div>
+      <div class="form-group"><label>📞 電話</label><input id="f_phone" value="${v('phone')}" type="tel"></div>
+      <button class="btn-primary" onclick="saveItem()">💾 儲存</button>`;
+  } else if (currentTab === 'medications') {
+    return `
+      <div class="form-group"><label>💊 藥物名稱</label><input id="f_name" value="${v('name')}" placeholder="藥名"></div>
+      <div class="form-row">
+        <div class="form-group"><label>⚖️ 劑量</label><input id="f_dosage" value="${v('dosage')}" placeholder="例如：5mg"></div>
+        <div class="form-group"><label>📦 數量</label><input id="f_quantity" value="${v('quantity')}" placeholder="例如：30粒"></div>
+      </div>
+      <div class="form-group"><label>🔄 用法</label><input id="f_frequency" value="${v('frequency')}" placeholder="例如：每日一次，飯後"></div>
+      <div class="form-group"><label>📝 備註</label><textarea id="f_notes">${v('notes')}</textarea></div>
+      <button class="btn-primary" onclick="saveItem()">💾 儲存</button>`;
+  }
+  return '';
+}
+
+function getFormData() {
+  const data = {};
+  if (currentTab === 'appointments') {
+    data.title = document.getElementById('f_title')?.value || '';
+    data.date = document.getElementById('f_date')?.value || '';
+    data.time = document.getElementById('f_time')?.value || '';
+    data.location = document.getElementById('f_location')?.value || '';
+    data.doctor_name = document.getElementById('f_doctor_name')?.value || '';
+    data.notes = document.getElementById('f_notes')?.value || '';
+  } else if (currentTab === 'doctors') {
+    data.name = document.getElementById('f_name')?.value || '';
+    data.specialty = document.getElementById('f_specialty')?.value || '';
+    data.hospital = document.getElementById('f_hospital')?.value || '';
+    data.address = document.getElementById('f_address')?.value || '';
+    data.phone = document.getElementById('f_phone')?.value || '';
+  } else if (currentTab === 'medications') {
+    data.name = document.getElementById('f_name')?.value || '';
+    data.dosage = document.getElementById('f_dosage')?.value || '';
+    data.quantity = document.getElementById('f_quantity')?.value || '';
+    data.frequency = document.getElementById('f_frequency')?.value || '';
+    data.notes = document.getElementById('f_notes')?.value || '';
+  }
+  return data;
+}
+
+async function saveItem() {
+  const data = getFormData();
+  if (editingId) {
+    const res = await apiCall(`/${currentTab}/${editingId}`, 'PUT', data);
+  } else {
+    const res = await apiCall(`/${currentTab}`, 'POST', data);
+  }
+  closeForm();
+  await loadAllData();
+}
+
+async function deleteItem(id) {
+  if (!confirm('確定刪除？')) return;
+  await apiCall(`/${currentTab}/${id}`, 'DELETE');
+  await loadAllData();
+}
+
+// ===== STATUS =====
+function setStatus(state, text) {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  dot.className = 'status-dot ' + state;
+  txt.textContent = text;
+}
+</script>
+</body>
+</html>
