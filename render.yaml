@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: grandma-app-v2
+    runtime: python
+    repo: https://github.com/kwokfamilyapps/grandma-app-v2
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    healthCheckPath: /api/health
+    envVars:
+      - key: NOTION_TOKEN
+        sync: false
+      - key: NOTION_APPOINTMENTS_DB
+        sync: false
+      - key: NOTION_DOCTORS_DB
+        sync: false
+      - key: NOTION_MEDICATIONS_DB
+        sync: false
