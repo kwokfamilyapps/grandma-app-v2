@@ -285,4 +285,4 @@ if __name__ == '__main__':
         print("   export NOTION_APPOINTMENTS_DB='database_id'")
         print("   export NOTION_DOCTORS_DB='database_id'")
         print("   export NOTION_MEDICATIONS_DB='database_id'")
-    app.run(host='0.0.0.0', port=8082, debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8082)), debug=False)
