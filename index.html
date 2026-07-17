@@ -29,6 +29,20 @@
   }
   .app-header h1 { font-size: 1.6rem; font-weight: 700; }
   .app-header .subtitle { font-size: 0.85rem; opacity: .8; margin-top: 2px; }
+  .header-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .avatar-circle {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.6);
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #3d7a5a;
+  }
   .header-actions {
     display: flex;
     gap: 10px;
@@ -463,8 +477,13 @@
 
 <!-- ===== HEADER ===== -->
 <header class="app-header">
-  <h1>👵 嫲嫲覆診助手</h1>
-  <div class="subtitle">屋企人隨時睇到最新覆診資料</div>
+  <div class="header-top">
+    <img class="avatar-circle" src="avatar.png" alt="嫲嫲">
+    <div>
+      <h1>嫲嫲覆診助手</h1>
+      <div class="subtitle">屋企人隨時睇到最新覆診資料</div>
+    </div>
+  </div>
   <div class="header-actions">
     <button class="btn" id="viewModeBtn" onclick="toggleViewMode()">👁 睇模式</button>
     <button class="btn" id="adminModeBtn" onclick="showAdminLogin()">🔑 管理</button>
